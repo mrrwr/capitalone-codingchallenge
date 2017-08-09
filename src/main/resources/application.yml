@@ -1,0 +1,46 @@
+security.basic.enabled: false # for demo purposes
+management.security.enabled: false  # for demo purposes
+
+spring:
+  jackson:
+    serialization.WRITE_DATES_AS_TIMESTAMPS: false
+    serialization.INDENT_OUTPUT: true
+  datasource:
+    url: jdbc:h2:mem:stock_record;DB_CLOSE_ON_EXIT=FALSE
+    username: tU9YzaF26jg8zMQV9br8PtNncZsdxRxH # for demo purposes
+    password: eELCJAmhZm6H3XuWjHRycqvRDZs3Doiv # for demo purposes
+    driver-class-name: org.h2.Driver
+
+app:
+  quandl:
+    url: https://www.quandl.com/api/v3/
+    dataset: datatables/WIKI/PRICES.json
+    api_key: s-GMZ_xkw6CrkGYUWs1p
+  tickers: COF,GOOGL,MSFT
+  start_date: 2017-01-01  #inclusive
+  end_date: 2017-07-01  #exclusive
+
+query:
+  find_averages_by_month: >
+      select ticker, formatdatetime(date, 'yyyy-MM') month, avg(open) average_open, avg(close) average_close
+      from stock_record
+      group by ticker, month
+      order by ticker, month
+  #find_max_profitable_day: select top 3 ticker, max(high - low) as profit  from stock_record group by ticker
+  find_max_profitable_day: >
+      select stock_record.ticker, stock_record.date, profits.profit
+      from stock_record
+      join (select ticker, max(date) as date, max(high - low) as profit from stock_record group by ticker) profits
+      on profits.ticker = stock_record.ticker and (stock_record.high - stock_record.low) = profits.profit
+  find_busiest_days: >
+      select *
+      from stock_record, (select ticker, avg(volume) average_volume from stock_record group by ticker) volumes
+      where stock_record.ticker = volumes.ticker and stock_record.volume > volumes.average_volume * 1.1
+      order by ticker, date
+  find_biggest_loser: >
+      select count(ticker) as number_of_days, ticker
+      from stock_record
+      where close < open
+      group by ticker
+      order by number_of_days desc
+      limit 1
